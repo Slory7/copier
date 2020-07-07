@@ -4,6 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"reflect"
+	"time"
+
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 // Copy copy things
@@ -174,16 +178,30 @@ func set(to, from reflect.Value) bool {
 
 		if from.Type().ConvertibleTo(to.Type()) {
 			to.Set(from.Convert(to.Type()))
-		} else if scanner, ok := to.Addr().Interface().(sql.Scanner); ok {
-			err := scanner.Scan(from.Interface())
-			if err != nil {
-				return false
-			}
-		} else if from.Kind() == reflect.Ptr {
-			return set(to, from.Elem())
-		} else {
-			return false
+			return true
 		}
+		if scanner, ok := to.Addr().Interface().(sql.Scanner); ok {
+			err := scanner.Scan(from.Interface())
+			return err == nil
+		}
+		if from.Kind() == reflect.Ptr {
+			return set(to, from.Elem())
+		}
+		v1, b1 := from.Interface().(timestamp.Timestamp)
+		_, b2 := to.Interface().(time.Time)
+		if b1 && b2 {
+			t, _ := ptypes.Timestamp(&v1)
+			to.Set(reflect.ValueOf(t))
+			return true
+		}
+		v3, b3 := from.Interface().(time.Time)
+		_, b4 := to.Interface().(timestamp.Timestamp)
+		if b3 && b4 {
+			t, _ := ptypes.TimestampProto(v3)
+			to.Set(reflect.ValueOf(*t))
+			return true
+		}
+		return false
 	}
 	return true
 }
