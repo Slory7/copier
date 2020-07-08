@@ -187,19 +187,19 @@ func set(to, from reflect.Value) bool {
 		if from.Kind() == reflect.Ptr {
 			return set(to, from.Elem())
 		}
-		v1, b1 := from.Interface().(timestamp.Timestamp)
-		_, b2 := to.Interface().(time.Time)
-		if b1 && b2 {
-			t, _ := ptypes.Timestamp(&v1)
-			to.Set(reflect.ValueOf(t))
-			return true
+		if v, ok := from.Interface().(timestamp.Timestamp); ok {
+			if _, ok = to.Interface().(time.Time); ok {
+				t, _ := ptypes.Timestamp(&v)
+				to.Set(reflect.ValueOf(t))
+				return true
+			}
 		}
-		v3, b3 := from.Interface().(time.Time)
-		_, b4 := to.Interface().(timestamp.Timestamp)
-		if b3 && b4 {
-			t, _ := ptypes.TimestampProto(v3)
-			to.Set(reflect.ValueOf(*t))
-			return true
+		if v, ok := from.Interface().(time.Time); ok {
+			if _, ok = to.Interface().(timestamp.Timestamp); ok {
+				t, _ := ptypes.TimestampProto(v)
+				to.Set(reflect.ValueOf(*t))
+				return true
+			}
 		}
 		return false
 	}
